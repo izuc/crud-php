@@ -38,6 +38,7 @@ public class App extends JFrame {
     private JComboBox<String> cmbAuthTable;
     private JComboBox<String> cmbAuthUsernameField;
     private JComboBox<String> cmbAuthPasswordField;
+    private JComboBox<String> cmbAuthPrimaryKey;
     private JButton btnConnect;
     private JButton btnSelectAll;
     private JButton btnUnselectAll;
@@ -76,6 +77,7 @@ public class App extends JFrame {
         cmbAuthTable = new JComboBox<>();
         cmbAuthUsernameField = new JComboBox<>();
         cmbAuthPasswordField = new JComboBox<>();
+        cmbAuthPrimaryKey = new JComboBox<>();
 
         btnConnect = new JButton("Connect");
         btnConnect.addActionListener(e -> loadTables());
@@ -172,42 +174,48 @@ public class App extends JFrame {
 
         gbc.gridx = 0;
         gbc.gridy = 8;
+        formPanel.add(new JLabel("Auth Primary Key:"), gbc);
+        gbc.gridx = 1;
+        formPanel.add(cmbAuthPrimaryKey, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 9;
         formPanel.add(new JLabel("Package Name:"), gbc);
         gbc.gridx = 1;
         formPanel.add(txtPackageName, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 9;
+        gbc.gridy = 10;
         formPanel.add(new JLabel("App Name:"), gbc);
         gbc.gridx = 1;
         formPanel.add(txtAppName, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 10;
+        gbc.gridy = 11;
         formPanel.add(new JLabel("App URL:"), gbc);
         gbc.gridx = 1;
         formPanel.add(txtAppUrl, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 11;
+        gbc.gridy = 12;
         formPanel.add(new JLabel("JWT Secret:"), gbc);
         gbc.gridx = 1;
         formPanel.add(txtJwtSecret, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 12;
+        gbc.gridy = 13;
         formPanel.add(new JLabel("DB Driver:"), gbc);
         gbc.gridx = 1;
         formPanel.add(txtDbDriver, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 13;
+        gbc.gridy = 14;
         formPanel.add(new JLabel("DB Charset:"), gbc);
         gbc.gridx = 1;
         formPanel.add(txtDbCharset, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 14;
+        gbc.gridy = 15;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
         formPanel.add(btnConnect, gbc);
@@ -295,6 +303,7 @@ public class App extends JFrame {
             List<ColumnModel> columns = dbHelper.getTableColumns(table);
             populateAuthFieldComboBox(cmbAuthUsernameField, columns);
             populateAuthFieldComboBox(cmbAuthPasswordField, columns);
+            populateAuthPrimaryKeyComboBox(cmbAuthPrimaryKey, columns);
         } catch (Exception ex) {
             handleException(ex);
         }
@@ -306,6 +315,15 @@ public class App extends JFrame {
                 .map(ColumnModel::getField)
                 .collect(Collectors.toList());
         columnNames.forEach(comboBox::addItem);
+    }
+
+    private void populateAuthPrimaryKeyComboBox(JComboBox<String> comboBox, List<ColumnModel> columns) {
+        comboBox.removeAllItems();
+        List<String> primaryKeyColumns = columns.stream()
+                .filter(column -> "PRI".equals(column.getKey()))
+                .map(ColumnModel::getField)
+                .collect(Collectors.toList());
+        primaryKeyColumns.forEach(comboBox::addItem);
     }
 
     private void handleException(Exception ex) {
@@ -333,11 +351,14 @@ public class App extends JFrame {
         String authPasswordField = cmbAuthPasswordField.getSelectedItem() != null
                 ? cmbAuthPasswordField.getSelectedItem().toString()
                 : "";
+        String authPrimaryKey = cmbAuthPrimaryKey.getSelectedItem() != null
+                ? cmbAuthPrimaryKey.getSelectedItem().toString()
+                : "";
 
         try {
             CodeInput<FinalQueryData> codeInput = generator.automator(
                     txtPackageName.getText(), selectedTables, dbHelper,
-                    authTable, authUsernameField, authPasswordField,
+                    authTable, authUsernameField, authPasswordField, authPrimaryKey,
                     txtAppName.getText(), txtAppUrl.getText(), txtJwtSecret.getText(),
                     txtDbDriver.getText(), txtDbCharset.getText(),
                     txtHost.getText(), txtPort.getText(), txtDatabase.getText(),
@@ -375,14 +396,17 @@ public class App extends JFrame {
         String composerJsonPath = projectDirectory + "/composer.json";
         try {
             // Read the existing composer.json content
-            String composerJsonContent = new String(Files.readAllBytes(Paths.get(composerJsonPath)), StandardCharsets.UTF_8);
+            String composerJsonContent = new String(Files.readAllBytes(Paths.get(composerJsonPath)),
+                    StandardCharsets.UTF_8);
 
             // Update the composer.json content with the app name and package name
             composerJsonContent = composerJsonContent.replace("\"name\": \"\"", "\"name\": \"" + packageName + "\"")
-                    .replace("\"description\": \"\"", "\"description\": \"" + appName + " - A generated API for your project\"");
+                    .replace("\"description\": \"\"",
+                            "\"description\": \"" + appName + " - A generated API for your project\"");
 
             // Write the updated content back to composer.json
-            Files.write(Paths.get(composerJsonPath), composerJsonContent.getBytes(StandardCharsets.UTF_8), StandardOpenOption.TRUNCATE_EXISTING);
+            Files.write(Paths.get(composerJsonPath), composerJsonContent.getBytes(StandardCharsets.UTF_8),
+                    StandardOpenOption.TRUNCATE_EXISTING);
 
             logMessage("composer.json file updated successfully", true);
         } catch (IOException e) {
